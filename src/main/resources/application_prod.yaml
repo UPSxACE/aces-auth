@@ -1,0 +1,16 @@
+spring:
+  config:
+    activate:
+      on-profile: prod # activates the properties in this file when the 'prod' profile is active
+  datasource:
+    url: "jdbc:postgresql://${DATABASE_HOST:localhost}:${DATABASE_PORT:5432}/${DATABASE_NAME:aces_auth}"
+    username: "${DATABASE_USERNAME:postgres}"
+    password: "${DATABASE_PASSWORD:postgres#}"
+  jpa:
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        format_sql: ${HIBERNATE_FORMAT_SQL:false}
+logging:
+  level:
+    org.springframework.security: "${SECURITY_LOG_LEVEL:ERROR}"

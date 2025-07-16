@@ -1,0 +1,22 @@
+spring:
+  config:
+    import: "application_prod.yaml" # communicates to Spring Boot to import the production profile settings
+  profiles:
+    active: prod # may be overridden by SPRING_PROFILES_ACTIVE
+
+  application:
+    name: aces-auth-service
+  datasource:
+    url: "jdbc:postgresql://${DATABASE_HOST:localhost}:${DATABASE_PORT:5432}/${DATABASE_NAME:aces_auth}_dev"
+    username: "${DATABASE_USERNAME:postgres}"
+    password: "${DATABASE_PASSWORD:postgres}"
+  jpa:
+    show-sql: ${JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: ${HIBERNATE_FORMAT_SQL:true}
+logging:
+  pattern:
+    console: "${LOG_PATTERN_CONSOLE:%green(%d{HH:mm:ss.SSS}) %blue(%-5level) %red([%thread]) %yellow(%logger{15}) - %msg%n}"
+  level:
+    org.springframework.security: "${SECURITY_LOG_LEVEL:TRACE}"
