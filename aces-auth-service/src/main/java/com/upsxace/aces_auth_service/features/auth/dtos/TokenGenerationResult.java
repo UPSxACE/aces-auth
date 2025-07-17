@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class LoginResult {
+public class TokenGenerationResult {
     private final String accessToken;
     private final String refreshToken;
 }

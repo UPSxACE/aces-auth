@@ -28,7 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         var token = authHeader.replace("Bearer ", "");
-        if(jwtService.resolveToken(token, TokenType.ACCESS).isEmpty()){
+        if(!jwtService.verifyToken(token, TokenType.ACCESS)){
             filterChain.doFilter(request, response);
             return;
         }

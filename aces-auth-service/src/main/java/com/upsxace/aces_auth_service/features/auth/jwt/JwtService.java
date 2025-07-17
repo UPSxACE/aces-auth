@@ -1,11 +1,13 @@
 package com.upsxace.aces_auth_service.features.auth.jwt;
 
 import com.upsxace.aces_auth_service.config.AppConfig;
-import com.upsxace.aces_auth_service.features.auth.dtos.RefreshTokenResult;
+import com.upsxace.aces_auth_service.features.auth.dtos.RefreshTokensResult;
+import com.upsxace.aces_auth_service.features.auth.dtos.TokenGenerationResult;
 import com.upsxace.aces_auth_service.features.user.User;
 import com.upsxace.aces_auth_service.features.user.UserContext;
 import com.upsxace.aces_auth_service.features.user.UserRepository;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -29,7 +31,7 @@ public class JwtService {
         return Keys.hmacShaKeyFor(appConfig.getJwt().getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
-    private Claims getClaims(String token) {
+    public Claims getClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -65,30 +67,68 @@ public class JwtService {
                 .compact();
     }
 
+    public TokenGenerationResult generateTokenPair(User user, AuthenticationMethodReference amr) {
+        // Refresh token has to be generated first because access tokens cannot be older than the refresh token
+        var refreshToken = generateRefreshToken(user.getId().toString());
+
+        return new TokenGenerationResult(
+                generateTokenForUser(user, amr),
+                refreshToken
+        );
+    }
+
     public Cookie createRefreshTokenCookie(String refreshToken) {
         var cookie = new Cookie("refreshToken", refreshToken);
         cookie.setHttpOnly(true); // prevent JavaScript access
-        cookie.setPath("/auth/refresh"); // only send cookie to this route
+        cookie.setPath("/auth"); // only send cookie to this route
         cookie.setMaxAge((int) appConfig.getJwt().getRefreshTokenExpiration());
         cookie.setSecure(true); // only https connections
 
         return cookie;
     }
 
-    public Optional<Claims> resolveToken(String token, TokenType tokenType) {
-        try {
+
+    /**
+     * Resolves the token and checks if it is still valid (not expired).
+     *
+     * @param token the JWT token
+     * @param tokenType the type of the token (ACCESS or REFRESH)
+     * @return an Optional containing the claims if the token is valid, otherwise empty
+     */
+    public Claims resolveToken(String token, TokenType tokenType) {
             var claims = getClaims(token);
 
             var tokenTypeMismatch = !tokenType.name().toLowerCase().equals(claims.get("token_type", String.class));
-            var expired = new Date().after(claims.getExpiration());
-
-            if (tokenTypeMismatch || expired) {
-                return Optional.empty();
+            if (tokenTypeMismatch) {
+                throw new BadCredentialsException("Token type mismatch.");
             }
 
-            return Optional.of(claims);
+            return claims;
+    }
+
+    /**
+     * Resolves the token and returns the claims, even if the token is expired.
+     *
+     * @param token the JWT token
+     * @param tokenType the type of the token (ACCESS or REFRESH)
+     * @return an Optional containing the claims if the token is valid besides expired, otherwise empty
+     */
+    public Optional<Claims> resolveTokenUnsafe(String token, TokenType tokenType){
+        try {
+            return Optional.of(resolveToken(token, tokenType));
+        } catch (ExpiredJwtException ex) {
+            return Optional.of(ex.getClaims());
         } catch (JwtException ex) {
             return Optional.empty();
+        }
+    }
+
+    public boolean verifyToken(String token, TokenType tokenType){
+        try {
+            resolveToken(token, tokenType);
+            return true;
+        } catch (JwtException ex) {
+            return false;
         }
     }
 
@@ -98,10 +138,9 @@ public class JwtService {
         return new Date().after(renewalDate);
     }
 
-    public RefreshTokenResult refreshToken(String accessToken, String refreshToken) {
-            var refreshTokenClaims = resolveToken(refreshToken, TokenType.REFRESH)
-                    .orElseThrow(() -> new BadCredentialsException("Invalid refresh token."));
-            var accessTokenClaims = resolveToken(accessToken, TokenType.ACCESS)
+    public RefreshTokensResult refreshTokens(String accessToken, String refreshToken) {
+            var refreshTokenClaims = resolveToken(refreshToken, TokenType.REFRESH);
+            var accessTokenClaims = resolveTokenUnsafe(accessToken, TokenType.ACCESS)
                     .orElseThrow(() -> new BadCredentialsException("Invalid access token."));
 
             if (!refreshTokenClaims.getSubject().equals(accessTokenClaims.getSubject())) {
@@ -113,6 +152,11 @@ public class JwtService {
 
             // Refresh only if access token is older than 2/3 of its lifetime
             if (shouldRenewToken(accessTokenClaims.getExpiration(), appConfig.getJwt().getAccessTokenExpiration())) {
+                // Access token cannot be older than refresh token
+                if (accessTokenClaims.getIssuedAt().before(refreshTokenClaims.getIssuedAt())) {
+                    throw new BadCredentialsException("Access token cannot be older than refresh token.");
+                }
+
                 var amr = AuthenticationMethodReference.valueOf(
                         accessTokenClaims
                                 .get("amr", List.class)
@@ -132,7 +176,7 @@ public class JwtService {
                 freshRefreshToken = generateRefreshToken(accessTokenClaims.getSubject());
             }
 
-            return new RefreshTokenResult(freshAccessToken, freshRefreshToken);
+            return new RefreshTokensResult(freshAccessToken, freshRefreshToken);
 
     }
 

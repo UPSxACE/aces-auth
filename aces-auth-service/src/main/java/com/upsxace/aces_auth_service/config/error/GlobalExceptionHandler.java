@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestCookieException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -20,12 +22,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorDto("Bad credentials."));
     }
 
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorDto> handleMissingRequestHeaderException(MissingRequestHeaderException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto("Required request header is missing."));
+    }
+
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity<ErrorDto> handleMissingRequestCookieException(MissingRequestCookieException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto("Required request cookie is missing."));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorDto> handleMessageNotReadableException(HttpMessageNotReadableException ex) {
         var message = "Bad request.";
 
         if (ex.getMessage().startsWith("Required request body is missing"))
-            message = "Required request body is missing";
+            message = "Required request body is missing.";
 
         // Log unexpected error
         if(message.equals("Bad request."))
