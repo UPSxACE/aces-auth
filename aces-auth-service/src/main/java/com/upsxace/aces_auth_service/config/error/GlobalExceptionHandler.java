@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,16 +15,20 @@ import org.slf4j.LoggerFactory;
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorDto> handleBadCredentialsException(BadCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorDto("Bad credentials."));
+    }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorDto> handleMessageNotReadableException(HttpMessageNotReadableException ex) {
-        var message = "Bad request";
+        var message = "Bad request.";
 
         if (ex.getMessage().startsWith("Required request body is missing"))
             message = "Required request body is missing";
 
         // Log unexpected error
-        if(message.equals("Bad request"))
+        if(message.equals("Bad request."))
             log.error("Unexpected bad request error", ex);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto(message));
@@ -41,9 +46,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto(ex.getMessage()));
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorDto> handleNotFoundExceptions(Exception ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorDto(ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorDto> handleAllExceptions(Exception ex) {
         log.error("Unexpected error", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorDto("Internal error"));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorDto("Internal error."));
     }
 }
