@@ -22,18 +22,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         var authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")){
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         var token = authHeader.replace("Bearer ", "");
-        if(!jwtService.verifyToken(token, TokenType.ACCESS)){
+        var userContext = jwtService.createUserContextFromToken(token).orElse(null);
+        if (userContext == null) {
             filterChain.doFilter(request, response);
             return;
         }
-
-        var userContext = jwtService.createUserContextFromToken(token);
 
         var authentication = new UsernamePasswordAuthenticationToken(
                 userContext,
@@ -41,7 +40,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 userContext.getAuthorities()
         );
 
-        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request)); // adds metadata about the request, such as ip address, to the authentication object
+        // adds metadata about the request, such as ip address, to the authentication object
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 

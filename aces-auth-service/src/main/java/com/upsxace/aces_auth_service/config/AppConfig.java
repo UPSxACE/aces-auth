@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "config")
 @Data
 public class AppConfig {
+    private String appIdentity;
     private String frontendUrl;
     private Jwt jwt;
 

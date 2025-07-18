@@ -1,29 +1,36 @@
 package com.upsxace.aces_auth_service.features.auth;
 
+import com.upsxace.aces_auth_service.config.AppConfig;
 import com.upsxace.aces_auth_service.features.auth.dtos.LoginRequest;
 import com.upsxace.aces_auth_service.features.auth.dtos.JwtDto;
 import com.upsxace.aces_auth_service.features.auth.dtos.RegisterByEmailRequest;
-import com.upsxace.aces_auth_service.features.auth.jwt.BlacklistedTokenException;
-import com.upsxace.aces_auth_service.features.auth.jwt.JwtService;
-import com.upsxace.aces_auth_service.features.auth.jwt.TokenBlacklistService;
 import com.upsxace.aces_auth_service.features.user.UserService;
 import com.upsxace.aces_auth_service.features.user.dtos.UserProfileDto;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
+    private final AppConfig appConfig;
     private final UserService userService;
     private final AuthService authService;
-    private final JwtService jwtService;
-    private final TokenBlacklistService tokenBlacklistService;
+
+    private Cookie createRefreshTokenCookie(String refreshToken) {
+        var cookie = new Cookie("refreshToken", refreshToken);
+        cookie.setHttpOnly(true); // prevent JavaScript access
+        cookie.setPath("/auth"); // only send cookie to this route
+        cookie.setMaxAge((int) appConfig.getJwt().getRefreshTokenExpiration());
+        cookie.setSecure(true); // only https connections
+
+        return cookie;
+    }
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(
@@ -40,7 +47,7 @@ public class AuthController {
     ){
         var loginResult = authService.loginByCredentials(request);
 
-        var cookie = jwtService.createRefreshTokenCookie(loginResult.getRefreshToken());
+        var cookie = createRefreshTokenCookie(loginResult.getRefreshToken());
         response.addCookie(cookie);
 
         return ResponseEntity
@@ -61,23 +68,13 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<JwtDto> refresh(
-            @RequestHeader(name = "Authorization") String authorizationHeader,
             @CookieValue(name = "refreshToken") String refreshToken,
             HttpServletResponse response
     ){
-        var a = tokenBlacklistService.isBlacklisted(refreshToken);
-        if(tokenBlacklistService.isBlacklisted(refreshToken)){
-            throw new BlacklistedTokenException();
-        }
 
-        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            throw new BadCredentialsException("Invalid authorization header");
-        }
-        var accessToken = authorizationHeader.replace("Bearer ", "");
-
-        var refreshTokenResult = jwtService.refreshTokens(accessToken, refreshToken);
+        var refreshTokenResult = authService.refreshTokens(refreshToken);
         if(!refreshTokenResult.getRefreshToken().equals(refreshToken)){
-            var cookie = jwtService.createRefreshTokenCookie(refreshTokenResult.getRefreshToken());
+            var cookie = createRefreshTokenCookie(refreshTokenResult.getRefreshToken());
             response.addCookie(cookie);
         }
 
@@ -86,13 +83,12 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @RequestHeader(name = "Authorization") String authorizationHeader,
             @CookieValue(name = "refreshToken") String refreshToken,
             HttpServletResponse response
     ){
-        tokenBlacklistService.blacklistToken(refreshToken);
+        authService.revokeTokenSession(refreshToken);
 
-        var cookie = jwtService.createRefreshTokenCookie(refreshToken);
+        var cookie = createRefreshTokenCookie(refreshToken);
         cookie.setMaxAge(0);
         response.addCookie(cookie);
 
