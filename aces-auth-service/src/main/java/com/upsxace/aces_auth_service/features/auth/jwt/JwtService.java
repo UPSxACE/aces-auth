@@ -38,7 +38,7 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String generateTokenForUser(UUID userId, List<AuthenticationMethodReference> amr) {
+    public String generateTokenForUser(UUID userId, List<String> amr, List<String> authorities) {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
@@ -48,12 +48,8 @@ public class JwtService {
                 .subject(user.getId().toString())
                 .issuer("aces-auth-service")
                 .claim("token_type", "access")
-                .claim("authorities", "ROLE_" + user.getRole())
-                .claim("amr", amr
-                        .stream()
-                        .map(a -> a.name().toLowerCase())
-                        .collect(Collectors.toList())
-                )
+                .claim("authorities", String.join(",", authorities))
+                .claim("amr", amr)
                 .issuedAt(new Date())
                 .expiration(new Date(new Date().getTime() + TOKEN_EXPIRATION_MS))
                 .signWith(getSigningKey())

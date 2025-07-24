@@ -12,8 +12,9 @@ import java.util.List;
 public class TokenSession {
     private final String refreshToken;
     private final String issuer;
-    private final List<AuthenticationMethodReference> amr;
+    private final List<String> amr;
     private final String subject;
+    private final List<String> authorities;
     private final Date issuedAt;
     private final Date expiresAt;
     private boolean revoked;

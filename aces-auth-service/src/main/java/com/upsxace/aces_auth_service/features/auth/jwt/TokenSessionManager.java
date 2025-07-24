@@ -13,7 +13,7 @@ public interface TokenSessionManager {
      * @param amr  the list of authentication method references
      * @return the refresh token of the created session
      */
-    String createTokenSession(UUID userId, List<AuthenticationMethodReference> amr);
+    String createTokenSession(UUID userId, List<String> amr);
 
     /**
      * Retrieves an access token associated with the given refresh token.
@@ -41,5 +41,15 @@ public interface TokenSessionManager {
      * @param refreshToken the refresh token
      */
     void revokeTokenSession(String refreshToken);
+
+    /**
+     * Retrieves session information that can be shown to user, for the given refresh token.
+     *
+     * @throws InvalidSessionException if the session is invalid or expired
+     *
+     * @param refreshToken the refresh token
+     * @return TokenSessionInfoDto containing information that can be shown to user
+     */
+    TokenSessionInfoDto getSessionInfo(String refreshToken) throws InvalidSessionException;
 
 }

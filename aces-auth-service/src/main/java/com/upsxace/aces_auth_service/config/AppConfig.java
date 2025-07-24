@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 public class AppConfig {
     private String appIdentity;
+    private int maxSessions;
     private String frontendUrl;
     private Jwt jwt;
 

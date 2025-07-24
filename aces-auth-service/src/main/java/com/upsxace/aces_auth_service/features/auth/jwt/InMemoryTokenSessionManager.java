@@ -2,6 +2,7 @@ package com.upsxace.aces_auth_service.features.auth.jwt;
 
 import com.upsxace.aces_auth_service.config.AppConfig;
 import com.upsxace.aces_auth_service.features.auth.dtos.RefreshTokensResult;
+import com.upsxace.aces_auth_service.features.user.UserService;
 import org.springframework.scheduling.TaskScheduler;
 
 import java.security.SecureRandom;
@@ -15,14 +16,17 @@ public class InMemoryTokenSessionManager implements TokenSessionManager {
 
     private final Map<String, TokenSession> tokenSessions = new ConcurrentHashMap<>();
     private final Map<String, ScheduledFuture<?>> scheduledRemovals = new ConcurrentHashMap<>();
+    private final Map<String, Deque<String>> userSessions = new ConcurrentHashMap<>();
 
     private final AppConfig appConfig;
+    private final UserService userService;
     private final JwtService jwtService;
     private final TaskScheduler taskScheduler;
 
-    public InMemoryTokenSessionManager(TaskScheduler taskScheduler, AppConfig appConfig,  JwtService jwtService) {
+    public InMemoryTokenSessionManager(TaskScheduler taskScheduler, AppConfig appConfig, UserService userService, JwtService jwtService) {
         this.taskScheduler = taskScheduler;
         this.appConfig = appConfig;
+        this.userService = userService;
         this.jwtService = jwtService;
     }
 
@@ -37,32 +41,58 @@ public class InMemoryTokenSessionManager implements TokenSessionManager {
     }
 
     private void saveTokenSession(TokenSession session) {
-        tokenSessions.put(session.getRefreshToken(), session);
-        scheduledRemovals.put(session.getRefreshToken(), taskScheduler.schedule(
+        var userId = session.getSubject();
+        var refreshToken = session.getRefreshToken();
+
+        userSessions.compute(userId, (key, deque) -> {
+            if (deque == null) deque = new ArrayDeque<>();
+            if (deque.size() >= appConfig.getMaxSessions()) {
+                // Remove oldest session
+                var oldestToken = deque.pollFirst();
+                tokenSessions.remove(oldestToken);
+                var scheduledRemoval = scheduledRemovals.remove(oldestToken);
+                if (scheduledRemoval != null) {
+                    scheduledRemoval.cancel(false);
+                }
+            }
+            deque.addLast(refreshToken);
+
+            return deque;
+        });
+
+        tokenSessions.put(refreshToken, session);
+        scheduledRemovals.put(refreshToken, taskScheduler.schedule(
                 () -> {
-                    tokenSessions.remove(session.getRefreshToken());
-                    scheduledRemovals.remove(session.getRefreshToken());
+                    tokenSessions.remove(refreshToken);
+                    scheduledRemovals.remove(refreshToken);
+                    userSessions.computeIfPresent(userId, (key, deque) -> {
+                        deque.remove(refreshToken);
+                        return deque;
+                    });
                 },
                 session.getExpiresAt().toInstant()
         ));
     }
 
     @Override
-    public String createTokenSession(UUID userId, List<AuthenticationMethodReference> amr) {
+    public String createTokenSession(UUID userId, List<String> amr) {
         var refreshToken = generateRefreshToken();
 
         final long TOKEN_EXPIRATION_MS = appConfig.getJwt().getRefreshTokenExpiration() * 1000;
+
+        var userAuthorities = userService.getUserAuthorities(userId);
 
         var tokenSession = new TokenSession(
                 refreshToken,
                 appConfig.getAppIdentity(),
                 amr,
                 userId.toString(),
+                userAuthorities,
                 new Date(),
                 new Date(System.currentTimeMillis() + TOKEN_EXPIRATION_MS),
                 false,
                 0,
-                jwtService.generateTokenForUser(userId, amr),
+                jwtService.generateTokenForUser(userId, amr, userAuthorities),
                 new Date()
         );
 
@@ -85,7 +115,7 @@ public class InMemoryTokenSessionManager implements TokenSessionManager {
             if (cachedToken != null)
                 return cachedToken;
 
-            var newAccessToken = jwtService.generateTokenForUser(UUID.fromString(session.getSubject()), session.getAmr());
+            var newAccessToken = jwtService.generateTokenForUser(UUID.fromString(session.getSubject()), session.getAmr(), session.getAuthorities());
             session.setCachedAccessToken(newAccessToken);
             session.setCachedAccessTokenIssuedAt(new Date());
 
@@ -114,9 +144,9 @@ public class InMemoryTokenSessionManager implements TokenSessionManager {
 
         synchronized (session) {
             // Refresh session if refresh token is older than 2/3 of its lifetime
-            if(shouldRenewToken(session.getExpiresAt(), appConfig.getJwt().getRefreshTokenExpiration())){
+            if (shouldRenewToken(session.getExpiresAt(), appConfig.getJwt().getRefreshTokenExpiration())) {
                 var scheduledRemoval = scheduledRemovals.remove(refreshToken);
-                if(scheduledRemoval != null) {
+                if (scheduledRemoval != null) {
                     scheduledRemoval.cancel(false);
                 }
 
@@ -127,11 +157,12 @@ public class InMemoryTokenSessionManager implements TokenSessionManager {
                         appConfig.getAppIdentity(),
                         session.getAmr(),
                         session.getSubject(),
+                        session.getAuthorities(),
                         new Date(),
                         new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_MS),
                         false,
                         session.getRotationCounter() + 1,
-                        jwtService.generateTokenForUser(UUID.fromString(session.getSubject()), session.getAmr()),
+                        jwtService.generateTokenForUser(UUID.fromString(session.getSubject()), session.getAmr(), session.getAuthorities()),
                         new Date()
                 );
 
@@ -145,7 +176,7 @@ public class InMemoryTokenSessionManager implements TokenSessionManager {
             var cachedAccessTokenExpiration = new Date(cachedAccessTokenIssuedAt.getTime() + ACCESS_TOKEN_EXPIRATION_MS);
             // Refresh the access token if it is older than 2/3 of its lifetime
             if (shouldRenewToken(cachedAccessTokenExpiration, appConfig.getJwt().getAccessTokenExpiration())) {
-                cachedAccessToken = jwtService.generateTokenForUser(UUID.fromString(session.getSubject()), session.getAmr());
+                cachedAccessToken = jwtService.generateTokenForUser(UUID.fromString(session.getSubject()), session.getAmr(), session.getAuthorities());
                 session.setCachedAccessToken(cachedAccessToken);
                 session.setCachedAccessTokenIssuedAt(new Date());
             }
@@ -155,14 +186,31 @@ public class InMemoryTokenSessionManager implements TokenSessionManager {
     }
 
 
-
     @Override
     public void revokeTokenSession(String refreshToken) {
-        var session = tokenSessions.get(refreshToken);
-        if(session != null){
+        try {
+            var session = getSession(refreshToken);
             synchronized (session) {
-                session.setRevoked(true);
+                tokenSessions.remove(refreshToken);
+                var scheduledRemoval = scheduledRemovals.remove(refreshToken);
+                if (scheduledRemoval != null) {
+                    scheduledRemoval.cancel(false);
+                }
+                userSessions.computeIfPresent(session.getSubject(), (key, deque) -> {
+                    deque.remove(refreshToken);
+                    return deque;
+                });
             }
+        } catch (InvalidSessionException ignored) {
         }
+    }
+
+    @Override
+    public TokenSessionInfoDto getSessionInfo(String refreshToken) throws InvalidSessionException {
+        var session = getSession(refreshToken);
+        return new TokenSessionInfoDto(
+                session.getSubject(),
+                session.getAuthorities()
+        );
     }
 }
