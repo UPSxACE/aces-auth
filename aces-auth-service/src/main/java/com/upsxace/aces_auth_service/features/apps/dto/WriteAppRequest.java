@@ -15,7 +15,7 @@ public class WriteAppRequest {
     private final String name;
     @NotEmpty(message = "At least one redirect URI must be provided.")
     private final List<String> redirectUris;
-    @NotBlank(message = "Homepage URI must not be blank.")
-    @URL(message = "Homepage URI must be a valid URL.")
-    private final String homepageUri;
+    @NotBlank(message = "Homepage URL must not be blank.")
+    @URL(message = "Homepage URL must be a valid URL.")
+    private final String homepageUrl;
 }

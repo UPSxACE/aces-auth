@@ -54,7 +54,7 @@ public class AppsService {
                     .clientId(generateClientId())
                     .clientSecret(aesKeyGenerator.encryptClientSecret(clientSecret))
                     .name(request.getName())
-                    .homepageUrl(request.getHomepageUri())
+                    .homepageUrl(request.getHomepageUrl())
                     .redirectUris(AppMapper.toListString(request.getRedirectUris()))
                     .build();
 
@@ -99,5 +99,22 @@ public class AppsService {
 
         app.setDeletedAt(LocalDateTime.now());
         appRepository.save(app);
+    }
+
+    public AppDto updateAppByUser(UUID appId, WriteAppRequest request) {
+        var app = appRepository.findByIdAndDeletedAtIsNull(appId).orElseThrow(
+                NotFoundException::new
+        );
+
+        var userContext = userService.getUserContext();
+
+        if(!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)){
+            throw new NotFoundException();
+        }
+
+        appMapper.update(request, app);
+        appRepository.save(app);
+
+        return appMapper.toDto(app);
     }
 }

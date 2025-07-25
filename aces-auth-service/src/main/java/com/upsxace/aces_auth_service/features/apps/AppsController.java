@@ -54,4 +54,12 @@ public class AppsController {
         appsService.deleteAppByUser(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<AppDto> updateApp(
+            @PathVariable(name = "id") UUID id,
+            @Valid @RequestBody WriteAppRequest request
+    ){
+        return ResponseEntity.ok(appsService.updateAppByUser(id, request));
+    }
 }
