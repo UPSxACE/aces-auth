@@ -1,6 +1,6 @@
 package com.upsxace.aces_auth_service.features.auth.jwt;
 
-import com.upsxace.aces_auth_service.features.auth.dtos.RefreshTokensResult;
+import com.upsxace.aces_auth_service.features.auth.dto.RefreshTokensResult;
 
 import java.util.List;
 import java.util.UUID;

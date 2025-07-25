@@ -38,3 +38,5 @@ config:
     discord:
       client-id: "${DISCORD_CLIENT_ID:}"
       client-secret: "${DISCORD_CLIENT_SECRET:}"
+  apps:
+    aes-secret-key: "${APPS_AES_SECRET_KEY:}"

@@ -1,4 +1,4 @@
-package com.upsxace.aces_auth_service.features.auth.dtos;
+package com.upsxace.aces_auth_service.features.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

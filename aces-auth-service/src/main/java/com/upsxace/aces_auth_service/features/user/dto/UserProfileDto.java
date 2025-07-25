@@ -1,4 +1,4 @@
-package com.upsxace.aces_auth_service.features.user.dtos;
+package com.upsxace.aces_auth_service.features.user.dto;
 
 import lombok.Data;
 

@@ -1,4 +1,4 @@
-package com.upsxace.aces_auth_service.features.auth.dtos;
+package com.upsxace.aces_auth_service.features.auth.dto;
 
 import com.upsxace.aces_auth_service.common.validation.ValidFullName;
 import com.upsxace.aces_auth_service.common.validation.ValidPassword;
@@ -11,12 +11,13 @@ import lombok.Data;
 @Data
 public class RegisterByEmailRequest {
     @NotBlank(message = "Username is required.")
-    @Size(min = 3, max = 30, message = "Username must be between 3 and 30 characters long.")
+    @Size(min = 3, max = 30, message = "Username must be between 3 and 30 characters.")
     @ValidUsername
     private String username;
 
     @NotBlank(message = "Email is required.")
     @Email(message = "Email must be a valid email address.")
+    @Size(max = 255, message = "Email must be 255 characters or fewer.")
     private String email;
 
     @NotBlank(message = "Name is required.")

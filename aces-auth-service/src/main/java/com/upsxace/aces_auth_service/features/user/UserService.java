@@ -4,12 +4,11 @@ import com.upsxace.aces_auth_service.config.error.BadRequestException;
 import com.upsxace.aces_auth_service.config.error.NotFoundException;
 import com.upsxace.aces_auth_service.features.auth.UserAuthProvider;
 import com.upsxace.aces_auth_service.features.auth.UserAuthProviderRepository;
-import com.upsxace.aces_auth_service.features.auth.dtos.RegisterByEmailRequest;
-import com.upsxace.aces_auth_service.features.user.dtos.UserProfileDto;
+import com.upsxace.aces_auth_service.features.auth.dto.RegisterByEmailRequest;
+import com.upsxace.aces_auth_service.features.user.dto.UserProfileDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -34,10 +33,19 @@ public class UserService implements UserDetailsService {
         return user;
     }
 
+    public com.upsxace.aces_auth_service.features.user.User getUserById(UUID uuid){
+        return userRepository.findById(uuid)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+
+    public com.upsxace.aces_auth_service.features.user.User getUserById(String uuid){
+        return userRepository.findById(UUID.fromString(uuid))
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+
     @Override
     public UserDetails loadUserByUsername(String uuid) {
-        var user = userRepository.findById(UUID.fromString(uuid))
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        var user = getUserById(uuid);
 
         return new User(
                 user.getId().toString(),

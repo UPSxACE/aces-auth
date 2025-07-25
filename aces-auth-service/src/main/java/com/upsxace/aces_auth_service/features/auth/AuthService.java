@@ -2,10 +2,10 @@ package com.upsxace.aces_auth_service.features.auth;
 
 import com.upsxace.aces_auth_service.config.error.BadRequestException;
 import com.upsxace.aces_auth_service.config.error.NotFoundException;
-import com.upsxace.aces_auth_service.features.auth.dtos.LoginRequest;
-import com.upsxace.aces_auth_service.features.auth.dtos.OAuthLoginRequest;
-import com.upsxace.aces_auth_service.features.auth.dtos.RefreshTokensResult;
-import com.upsxace.aces_auth_service.features.auth.dtos.TokenGenerationResult;
+import com.upsxace.aces_auth_service.features.auth.dto.LoginRequest;
+import com.upsxace.aces_auth_service.features.auth.dto.OAuthLoginRequest;
+import com.upsxace.aces_auth_service.features.auth.dto.RefreshTokensResult;
+import com.upsxace.aces_auth_service.features.auth.dto.TokenGenerationResult;
 import com.upsxace.aces_auth_service.features.auth.jwt.*;
 import com.upsxace.aces_auth_service.features.auth.oauth.OpenIdConnectContext;
 import com.upsxace.aces_auth_service.features.user.User;

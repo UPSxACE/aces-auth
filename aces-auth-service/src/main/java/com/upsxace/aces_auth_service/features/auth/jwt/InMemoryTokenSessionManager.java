@@ -1,7 +1,7 @@
 package com.upsxace.aces_auth_service.features.auth.jwt;
 
 import com.upsxace.aces_auth_service.config.AppConfig;
-import com.upsxace.aces_auth_service.features.auth.dtos.RefreshTokensResult;
+import com.upsxace.aces_auth_service.features.auth.dto.RefreshTokensResult;
 import com.upsxace.aces_auth_service.features.user.UserService;
 import org.springframework.scheduling.TaskScheduler;
 

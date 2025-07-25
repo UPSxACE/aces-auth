@@ -1,13 +1,13 @@
 package com.upsxace.aces_auth_service.features.auth;
 
 import com.upsxace.aces_auth_service.config.AppConfig;
-import com.upsxace.aces_auth_service.features.auth.dtos.LoginRequest;
-import com.upsxace.aces_auth_service.features.auth.dtos.JwtDto;
-import com.upsxace.aces_auth_service.features.auth.dtos.OAuthLoginRequest;
-import com.upsxace.aces_auth_service.features.auth.dtos.RegisterByEmailRequest;
+import com.upsxace.aces_auth_service.features.auth.dto.LoginRequest;
+import com.upsxace.aces_auth_service.features.auth.dto.JwtDto;
+import com.upsxace.aces_auth_service.features.auth.dto.OAuthLoginRequest;
+import com.upsxace.aces_auth_service.features.auth.dto.RegisterByEmailRequest;
 import com.upsxace.aces_auth_service.features.auth.jwt.TokenSessionInfoDto;
 import com.upsxace.aces_auth_service.features.user.UserService;
-import com.upsxace.aces_auth_service.features.user.dtos.UserProfileDto;
+import com.upsxace.aces_auth_service.features.user.dto.UserProfileDto;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

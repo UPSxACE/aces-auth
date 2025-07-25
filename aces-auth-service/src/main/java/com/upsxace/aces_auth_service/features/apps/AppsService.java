@@ -1,0 +1,66 @@
+package com.upsxace.aces_auth_service.features.apps;
+
+import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
+import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
+import com.upsxace.aces_auth_service.features.user.UserService;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.security.SecureRandom;
+import java.util.Base64;
+
+@Service
+@RequiredArgsConstructor
+public class AppsService {
+    private final UserService userService;
+    private final AppRepository appRepository;
+    private final AesKeyGenerator aesKeyGenerator;
+    private final AppMapper appMapper;
+
+    private static final SecureRandom secureRandom = new SecureRandom();
+    private static final Base64.Encoder base64Encoder = Base64.getUrlEncoder().withoutPadding();
+
+    private String generateClientId(){
+        String clientId;
+        do {
+            byte[] randomBytes = new byte[24];
+            secureRandom.nextBytes(randomBytes);
+            clientId = base64Encoder.encodeToString(randomBytes);
+        } while (appRepository.existsByClientId(clientId));
+        return clientId;
+    }
+
+    private String generateClientSecret(){
+        byte[] randomBytes = new byte[32];
+        secureRandom.nextBytes(randomBytes);
+        return base64Encoder.encodeToString(randomBytes);
+    }
+
+    @Transactional
+    public AppDto createApp(WriteAppRequest request){
+        try {
+            var user = userService.getUserById(userService.getUserContext().getId());
+
+            var clientSecret = generateClientSecret();
+
+            var newApp = App.builder()
+                    .owner(user)
+                    .clientId(generateClientId())
+                    .clientSecret(aesKeyGenerator.encryptClientSecret(clientSecret))
+                    .name(request.getName())
+                    .homepageUrl(request.getHomepageUri())
+                    .redirectUris(AppMapper.toListString(request.getRedirectUris()))
+                    .build();
+
+            appRepository.save(newApp);
+
+            var appDto = appMapper.toDto(newApp);
+            appDto.setClientSecret(clientSecret);
+
+            return appDto;
+        } catch (Exception ex){
+            throw new InternalError("Failed creating app");
+        }
+    }
+}
