@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @ControllerAdvice
@@ -23,6 +24,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorDto> handleBadCredentialsException(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorDto("Bad credentials."));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorDto> handleMethodArgumentTypeMismatchExceptionException(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorDto("Method parameter type mismatch."));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)

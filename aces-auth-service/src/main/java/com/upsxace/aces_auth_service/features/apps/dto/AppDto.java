@@ -15,6 +15,11 @@ public class AppDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String clientSecret;
     private final List<String> redirectUris;
-    private final String homepageUri;
+    private final String homepageUrl;
     private final LocalDateTime createdAt;
+
+    public AppDto removeCredentials(){
+        this.clientSecret = null;
+        return this;
+    }
 }

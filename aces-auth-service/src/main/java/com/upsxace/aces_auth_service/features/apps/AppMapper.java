@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 public interface AppMapper {
     @Mapping(target = "redirectUris", qualifiedByName = "toStringList")
     AppDto toDto(App app);
+    List<AppDto> toDtoList(List<App> apps);
 
     @Named("toStringList")
     public static List<String> toStringList(String listString){

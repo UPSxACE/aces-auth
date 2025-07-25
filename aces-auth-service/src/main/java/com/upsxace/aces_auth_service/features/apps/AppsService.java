@@ -1,14 +1,19 @@
 package com.upsxace.aces_auth_service.features.apps;
 
+import com.upsxace.aces_auth_service.config.error.NotFoundException;
 import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
 import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
+import com.upsxace.aces_auth_service.features.user.Role;
 import com.upsxace.aces_auth_service.features.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +26,7 @@ public class AppsService {
     private static final SecureRandom secureRandom = new SecureRandom();
     private static final Base64.Encoder base64Encoder = Base64.getUrlEncoder().withoutPadding();
 
-    private String generateClientId(){
+    private String generateClientId() {
         String clientId;
         do {
             byte[] randomBytes = new byte[24];
@@ -31,14 +36,14 @@ public class AppsService {
         return clientId;
     }
 
-    private String generateClientSecret(){
+    private String generateClientSecret() {
         byte[] randomBytes = new byte[32];
         secureRandom.nextBytes(randomBytes);
         return base64Encoder.encodeToString(randomBytes);
     }
 
     @Transactional
-    public AppDto createApp(WriteAppRequest request){
+    public AppDto createApp(WriteAppRequest request) {
         try {
             var user = userService.getUserById(userService.getUserContext().getId());
 
@@ -59,8 +64,40 @@ public class AppsService {
             appDto.setClientSecret(clientSecret);
 
             return appDto;
-        } catch (Exception ex){
+        } catch (Exception ex) {
             throw new InternalError("Failed creating app");
         }
+    }
+
+    public AppDto getAppByUser(UUID appId, UUID userId) {
+        return appMapper.toDto(
+                appRepository.findByIdAndOwnerIdAndDeletedAtIsNull(appId, userId).orElseThrow(
+                        NotFoundException::new
+                )
+        );
+    }
+
+    public List<AppDto> getAppsFromUser(UUID uuid) {
+        return appMapper.toDtoList(appRepository.findByOwnerIdAndDeletedAtIsNull(uuid));
+    }
+
+    public List<AppDto> removeCredentials(List<AppDto> appDtos) {
+        appDtos.forEach(AppDto::removeCredentials);
+        return appDtos;
+    }
+
+    public void deleteAppByUser(UUID appId) {
+        var app = appRepository.findByIdAndDeletedAtIsNull(appId).orElseThrow(
+                NotFoundException::new
+        );
+
+        var userContext = userService.getUserContext();
+
+        if(!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)){
+            throw new NotFoundException();
+        }
+
+        app.setDeletedAt(LocalDateTime.now());
+        appRepository.save(app);
     }
 }

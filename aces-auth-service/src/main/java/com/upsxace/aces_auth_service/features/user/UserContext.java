@@ -12,4 +12,10 @@ import java.util.UUID;
 public class UserContext {
     private final UUID id;
     private final List<GrantedAuthority> authorities;
+
+    public boolean hasRole(Role role) {
+        return this.authorities.stream().anyMatch(
+                a -> a.getAuthority().equals(role.getAuthority())
+        );
+    }
 }
