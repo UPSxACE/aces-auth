@@ -2,6 +2,7 @@ package com.upsxace.aces_auth_service.features.apps;
 
 import com.upsxace.aces_auth_service.config.error.NotFoundException;
 import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
+import com.upsxace.aces_auth_service.features.apps.dto.ClientSecretDto;
 import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
 import com.upsxace.aces_auth_service.features.user.Role;
 import com.upsxace.aces_auth_service.features.user.UserService;
@@ -58,7 +59,7 @@ public class AppsService {
                     .redirectUris(AppMapper.toListString(request.getRedirectUris()))
                     .build();
 
-            appRepository.save(newApp);
+            appRepository.saveAndFlush(newApp);
 
             var appDto = appMapper.toDto(newApp);
             appDto.setClientSecret(clientSecret);
@@ -69,7 +70,7 @@ public class AppsService {
         }
     }
 
-    public AppDto getAppByUser(UUID appId, UUID userId) {
+    public AppDto getAppFromUser(UUID appId, UUID userId) {
         return appMapper.toDto(
                 appRepository.findByIdAndOwnerIdAndDeletedAtIsNull(appId, userId).orElseThrow(
                         NotFoundException::new
@@ -77,8 +78,22 @@ public class AppsService {
         );
     }
 
-    public List<AppDto> getAppsFromUser(UUID uuid) {
-        return appMapper.toDtoList(appRepository.findByOwnerIdAndDeletedAtIsNull(uuid));
+    public List<AppDto> getAppsFromUser(UUID userId) {
+        return appMapper.toDtoList(appRepository.findByOwnerIdAndDeletedAtIsNull(userId));
+    }
+
+    private App getAppByUser(UUID appId){
+        var app = appRepository.findByIdAndDeletedAtIsNull(appId).orElseThrow(
+                NotFoundException::new
+        );
+
+        var userContext = userService.getUserContext();
+
+        if(!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)){
+            throw new NotFoundException();
+        }
+
+        return app;
     }
 
     public List<AppDto> removeCredentials(List<AppDto> appDtos) {
@@ -86,6 +101,7 @@ public class AppsService {
         return appDtos;
     }
 
+    @Transactional
     public void deleteAppByUser(UUID appId) {
         var app = appRepository.findByIdAndDeletedAtIsNull(appId).orElseThrow(
                 NotFoundException::new
@@ -101,6 +117,7 @@ public class AppsService {
         appRepository.save(app);
     }
 
+    @Transactional
     public AppDto updateAppByUser(UUID appId, WriteAppRequest request) {
         var app = appRepository.findByIdAndDeletedAtIsNull(appId).orElseThrow(
                 NotFoundException::new
@@ -116,5 +133,20 @@ public class AppsService {
         appRepository.save(app);
 
         return appMapper.toDto(app);
+    }
+
+    @Transactional
+    public ClientSecretDto resetAppSecretByUser(UUID appId){
+        try {
+            var app = getAppByUser(appId);
+            var newClientSecret = generateClientSecret();
+
+            app.setClientSecret(aesKeyGenerator.encryptClientSecret(newClientSecret));
+            appRepository.save(app);
+
+            return new ClientSecretDto(newClientSecret);
+        } catch (Exception ex) {
+            throw new InternalError("Failed resetting secret");
+        }
     }
 }

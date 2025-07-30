@@ -1,6 +1,7 @@
 package com.upsxace.aces_auth_service.features.apps;
 
 import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
+import com.upsxace.aces_auth_service.features.apps.dto.ClientSecretDto;
 import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
 import com.upsxace.aces_auth_service.features.user.UserService;
 import jakarta.validation.Valid;
@@ -19,20 +20,6 @@ public class AppsController {
     private final UserService userService;
     private final AppsService appsService;
 
-    @GetMapping
-    public ResponseEntity<List<AppDto>> getApps() {
-        var userContext = userService.getUserContext();
-        return ResponseEntity.ok(appsService.removeCredentials(appsService.getAppsFromUser(userContext.getId())));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<AppDto> getApp(
-            @PathVariable(name = "id") UUID id
-    ) {
-        var userContext = userService.getUserContext();
-        return ResponseEntity.ok(appsService.getAppByUser(id, userContext.getId()).removeCredentials());
-    }
-
     @PostMapping
     public ResponseEntity<AppDto> createApp(
             @Valid @RequestBody WriteAppRequest request,
@@ -47,12 +34,18 @@ public class AppsController {
         return ResponseEntity.created(uri).body(appDto);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteApp(
+    @GetMapping
+    public ResponseEntity<List<AppDto>> getApps() {
+        var userContext = userService.getUserContext();
+        return ResponseEntity.ok(appsService.removeCredentials(appsService.getAppsFromUser(userContext.getId())));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AppDto> getApp(
             @PathVariable(name = "id") UUID id
     ) {
-        appsService.deleteAppByUser(id);
-        return ResponseEntity.noContent().build();
+        var userContext = userService.getUserContext();
+        return ResponseEntity.ok(appsService.getAppFromUser(id, userContext.getId()).removeCredentials());
     }
 
     @PutMapping("/{id}")
@@ -61,5 +54,20 @@ public class AppsController {
             @Valid @RequestBody WriteAppRequest request
     ){
         return ResponseEntity.ok(appsService.updateAppByUser(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteApp(
+            @PathVariable(name = "id") UUID id
+    ) {
+        appsService.deleteAppByUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/reset-secret")
+    public ResponseEntity<ClientSecretDto> resetSecret(
+            @PathVariable(name = "id") UUID id
+    ){
+        return ResponseEntity.ok(appsService.resetAppSecretByUser(id));
     }
 }
