@@ -9,6 +9,6 @@ import java.util.UUID;
 public interface AppRepository extends JpaRepository<App, UUID> {
     Optional<App> findByIdAndDeletedAtIsNull(UUID id);
     boolean existsByClientId(String clientId);
-    List<App> findByOwnerIdAndDeletedAtIsNull(UUID id);
+    List<App> findByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID id);
     Optional<App> findByIdAndOwnerIdAndDeletedAtIsNull(UUID clientId, UUID ownerId);
 }

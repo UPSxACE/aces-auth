@@ -79,7 +79,7 @@ public class AppsService {
     }
 
     public List<AppDto> getAppsFromUser(UUID userId) {
-        return appMapper.toDtoList(appRepository.findByOwnerIdAndDeletedAtIsNull(userId));
+        return appMapper.toDtoList(appRepository.findByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId));
     }
 
     private App getAppByUser(UUID appId){
