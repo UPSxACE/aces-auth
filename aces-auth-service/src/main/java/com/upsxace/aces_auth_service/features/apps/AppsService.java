@@ -3,8 +3,10 @@ package com.upsxace.aces_auth_service.features.apps;
 import com.upsxace.aces_auth_service.config.error.NotFoundException;
 import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
 import com.upsxace.aces_auth_service.features.apps.dto.ClientSecretDto;
+import com.upsxace.aces_auth_service.features.apps.dto.PublicAppInfoDto;
 import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
 import com.upsxace.aces_auth_service.features.user.Role;
+import com.upsxace.aces_auth_service.features.user.UserRepository;
 import com.upsxace.aces_auth_service.features.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +23,7 @@ public class AppsService {
     private final AppRepository appRepository;
     private final AesKeyGenerator aesKeyGenerator;
     private final AppMapper appMapper;
+    private final AppUserRepository appUserRepository;
 
     private static final SecureRandom secureRandom = new SecureRandom();
     private static final Base64.Encoder base64Encoder = Base64.getUrlEncoder().withoutPadding();
@@ -33,7 +34,7 @@ public class AppsService {
             byte[] randomBytes = new byte[24];
             secureRandom.nextBytes(randomBytes);
             clientId = base64Encoder.encodeToString(randomBytes);
-        } while (appRepository.existsByClientId(clientId));
+        } while (appRepository.existsByClientIdAndDeletedAtIsNull(clientId));
         return clientId;
     }
 
@@ -146,7 +147,69 @@ public class AppsService {
 
             return new ClientSecretDto(newClientSecret);
         } catch (Exception ex) {
-            throw new InternalError("Failed resetting secret");
+            throw new InternalError("Failed resetting secret.");
         }
+    }
+
+    @Transactional
+    public void giveConsentByUser(String clientId, String scopes){
+        var userContext = userService.getUserContext();
+
+        var appUser = appUserRepository.findByAppClientIdAndUserIdAndAppDeletedAtIsNull(clientId, userContext.getId()).orElseGet(() -> {
+            var app = appRepository.findByClientIdAndDeletedAtIsNull(clientId).orElseThrow(() -> new NotFoundException("App not found."));
+            var user = userService.getUserById(userContext.getId());
+            var newAppUser = new AppUser();
+            newAppUser.setApp(app);
+            newAppUser.setUser(user);
+
+            return newAppUser;
+        });
+
+        appUser.setGrantedAt(LocalDateTime.now());
+
+        var validScopes = Set.of("openid", "profile");
+        var requestedScopes = scopes.split(" ");
+        var newScopes = new ArrayList<String>();
+
+        for(var scope : requestedScopes){
+            if(validScopes.contains(scope))
+                newScopes.add(scope);
+        }
+
+        appUser.setScopes(String.join(" ", newScopes));
+
+        appUserRepository.save(appUser);
+    }
+
+    public boolean checkConsent(String clientId, UUID userId, Set<String> scopes){
+        if(!appRepository.existsByClientIdAndDeletedAtIsNull(clientId)){
+            throw new NotFoundException("App not found.");
+        }
+
+        var appUser = appUserRepository.findByAppClientIdAndUserIdAndAppDeletedAtIsNull(clientId, userId).orElse(null);
+        if(appUser == null)
+            return false;
+
+        var allowedScopes = appUser.getScopesList();
+
+        for (String scope : scopes){
+            if(!allowedScopes.contains(scope))
+                return false;
+        }
+
+        return true;
+    }
+
+    public PublicAppInfoDto getPublicAppInfo(String clientId, Set<String> checkScopes){
+            var app = appRepository.findByClientIdAndDeletedAtIsNull(clientId).orElseThrow(() -> new NotFoundException("App not found."));
+        var userContext = userService.getUserContext();
+        var authorized = userContext != null && !checkScopes.isEmpty()
+                ? checkConsent(clientId, userContext.getId(), checkScopes)
+                : null;
+        return new PublicAppInfoDto(app.getName(), app.getClientId(), app.getHomepageUrl(), authorized);
+    }
+
+    public PublicAppInfoDto getPublicAppInfo(String clientId){
+        return getPublicAppInfo(clientId, Set.of());
     }
 }

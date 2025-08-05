@@ -5,6 +5,7 @@ import com.upsxace.aces_auth_service.features.apps.dto.ClientSecretDto;
 import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
 import com.upsxace.aces_auth_service.features.user.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -69,5 +70,14 @@ public class AppsController {
             @PathVariable(name = "id") UUID id
     ){
         return ResponseEntity.ok(appsService.resetAppSecretByUser(id));
+    }
+
+    @PostMapping("/consent")
+    public ResponseEntity<Void> consent(
+            @RequestParam(name = "client_id") String clientId,
+            @Valid @NotBlank @RequestParam(name = "scopes") String scopes
+    ){
+        appsService.giveConsentByUser(clientId, scopes);
+        return ResponseEntity.ok().build();
     }
 }

@@ -8,7 +8,8 @@ import java.util.UUID;
 
 public interface AppRepository extends JpaRepository<App, UUID> {
     Optional<App> findByIdAndDeletedAtIsNull(UUID id);
-    boolean existsByClientId(String clientId);
+    boolean existsByClientIdAndDeletedAtIsNull(String clientId);
+    Optional<App> findByClientIdAndDeletedAtIsNull(String clientId);
     List<App> findByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID id);
     Optional<App> findByIdAndOwnerIdAndDeletedAtIsNull(UUID clientId, UUID ownerId);
 }

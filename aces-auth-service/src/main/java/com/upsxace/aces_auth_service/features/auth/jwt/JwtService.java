@@ -14,11 +14,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -65,5 +61,11 @@ public class JwtService {
         } catch (JwtException ex) {
             return Optional.empty();
         }
+    }
+
+    public UserContext createUserContextFromSessionInfo(TokenSessionInfoDto sessionInfo){
+        var id = sessionInfo.getUserId();
+        var authorities = AuthorityUtils.commaSeparatedStringToAuthorityList(String.join(",",sessionInfo.getAuthorities()));
+        return new UserContext(UUID.fromString(id), authorities);
     }
 }
