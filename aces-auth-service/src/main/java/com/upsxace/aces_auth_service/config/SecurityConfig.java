@@ -5,10 +5,12 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.upsxace.aces_auth_service.features.apps.AppOAuthClientAuthenticationProvider;
 import com.upsxace.aces_auth_service.features.apps.AppOAuthClientRepository;
-import com.upsxace.aces_auth_service.features.apps.AppRepository;
+import com.upsxace.aces_auth_service.features.apps.repository.AppRepository;
+import com.upsxace.aces_auth_service.features.apps.utils.AesKeyGenerator;
 import com.upsxace.aces_auth_service.features.auth.jwt.JwtAuthenticationFilter;
-import com.upsxace.aces_auth_service.features.auth.jwt.JwtOAuthAuthorizationRequestConverter;
+import com.upsxace.aces_auth_service.features.apps.JwtOAuthAuthorizationRequestConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -125,7 +127,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, JwtOAuthAuthorizationRequestConverter jwtOAuthAuthorizationRequestConverter)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, JwtOAuthAuthorizationRequestConverter jwtOAuthAuthorizationRequestConverter, AesKeyGenerator aesKeyGenerator, RegisteredClientRepository clientRepository)
             throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
@@ -148,6 +150,9 @@ public class SecurityConfig {
                                 .oidc(Customizer.withDefaults())    // Enable OpenID Connect 1.0
                                 .authorizationEndpoint(endpoint -> endpoint
                                         .authorizationRequestConverter(jwtOAuthAuthorizationRequestConverter)
+                                )
+                                .clientAuthentication(clientAuth -> clientAuth
+                                        .authenticationProvider(new AppOAuthClientAuthenticationProvider(aesKeyGenerator, clientRepository)) // modify authentication provider of authorization server endpoints
                                 )
                 )
                 .authorizeHttpRequests((authorize) ->

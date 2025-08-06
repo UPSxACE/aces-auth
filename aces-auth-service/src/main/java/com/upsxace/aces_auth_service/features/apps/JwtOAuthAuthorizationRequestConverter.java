@@ -1,6 +1,8 @@
-package com.upsxace.aces_auth_service.features.auth.jwt;
+package com.upsxace.aces_auth_service.features.apps;
 
-import com.upsxace.aces_auth_service.features.apps.AppsService;
+import com.upsxace.aces_auth_service.features.apps.service.AppsService;
+import com.upsxace.aces_auth_service.features.auth.jwt.JwtService;
+import com.upsxace.aces_auth_service.features.auth.jwt.TokenSessionManager;
 import com.upsxace.aces_auth_service.features.user.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +37,6 @@ public class JwtOAuthAuthorizationRequestConverter implements AuthenticationConv
             } catch(Exception ignored) {}
         }
 
-
         var authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return null;
@@ -60,7 +61,8 @@ public class JwtOAuthAuthorizationRequestConverter implements AuthenticationConv
         }
 
         var principal = new UsernamePasswordAuthenticationToken(
-                userContext,
+//                userContext, // FIXME: implement OAuth2TokenCustomizer
+                userContext.getId().toString(), // until OAuth2TokenCustomizer is implemented, use id as principal
                 null,
                 userContext.getAuthorities()
         );

@@ -1,5 +1,6 @@
-package com.upsxace.aces_auth_service.features.apps;
+package com.upsxace.aces_auth_service.features.apps.repository;
 
+import com.upsxace.aces_auth_service.features.apps.entity.App;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

@@ -1,5 +1,6 @@
-package com.upsxace.aces_auth_service.features.apps;
+package com.upsxace.aces_auth_service.features.apps.controller;
 
+import com.upsxace.aces_auth_service.features.apps.service.AppsService;
 import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
 import com.upsxace.aces_auth_service.features.apps.dto.ClientSecretDto;
 import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;

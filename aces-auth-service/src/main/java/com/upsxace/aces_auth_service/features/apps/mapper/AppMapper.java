@@ -1,12 +1,12 @@
-package com.upsxace.aces_auth_service.features.apps;
+package com.upsxace.aces_auth_service.features.apps.mapper;
 
+import com.upsxace.aces_auth_service.features.apps.entity.App;
 import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
 import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
-import org.mapstruct.factory.Mappers;
 
 import java.util.Arrays;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.upsxace.aces_auth_service.features.apps;
+package com.upsxace.aces_auth_service.features.apps.entity;
 
 import com.upsxace.aces_auth_service.features.user.User;
 import jakarta.persistence.*;

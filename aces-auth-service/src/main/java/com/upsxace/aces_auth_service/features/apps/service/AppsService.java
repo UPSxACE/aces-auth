@@ -1,12 +1,15 @@
-package com.upsxace.aces_auth_service.features.apps;
+package com.upsxace.aces_auth_service.features.apps.service;
 
 import com.upsxace.aces_auth_service.config.error.NotFoundException;
-import com.upsxace.aces_auth_service.features.apps.dto.AppDto;
-import com.upsxace.aces_auth_service.features.apps.dto.ClientSecretDto;
-import com.upsxace.aces_auth_service.features.apps.dto.PublicAppInfoDto;
-import com.upsxace.aces_auth_service.features.apps.dto.WriteAppRequest;
+import com.upsxace.aces_auth_service.features.apps.dto.*;
+import com.upsxace.aces_auth_service.features.apps.entity.App;
+import com.upsxace.aces_auth_service.features.apps.entity.AppUser;
+import com.upsxace.aces_auth_service.features.apps.mapper.AppMapper;
+import com.upsxace.aces_auth_service.features.apps.mapper.ConnectionMapper;
+import com.upsxace.aces_auth_service.features.apps.repository.AppRepository;
+import com.upsxace.aces_auth_service.features.apps.repository.AppUserRepository;
+import com.upsxace.aces_auth_service.features.apps.utils.AesKeyGenerator;
 import com.upsxace.aces_auth_service.features.user.Role;
-import com.upsxace.aces_auth_service.features.user.UserRepository;
 import com.upsxace.aces_auth_service.features.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,7 @@ public class AppsService {
     private final AesKeyGenerator aesKeyGenerator;
     private final AppMapper appMapper;
     private final AppUserRepository appUserRepository;
+    private final ConnectionMapper connectionMapper;
 
     private static final SecureRandom secureRandom = new SecureRandom();
     private static final Base64.Encoder base64Encoder = Base64.getUrlEncoder().withoutPadding();
@@ -83,14 +87,14 @@ public class AppsService {
         return appMapper.toDtoList(appRepository.findByOwnerIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId));
     }
 
-    private App getAppByUser(UUID appId){
+    private App getAppByUser(UUID appId) {
         var app = appRepository.findByIdAndDeletedAtIsNull(appId).orElseThrow(
                 NotFoundException::new
         );
 
         var userContext = userService.getUserContext();
 
-        if(!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)){
+        if (!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)) {
             throw new NotFoundException();
         }
 
@@ -110,7 +114,7 @@ public class AppsService {
 
         var userContext = userService.getUserContext();
 
-        if(!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)){
+        if (!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)) {
             throw new NotFoundException();
         }
 
@@ -126,7 +130,7 @@ public class AppsService {
 
         var userContext = userService.getUserContext();
 
-        if(!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)){
+        if (!app.getOwner().getId().equals(userContext.getId()) && !userContext.hasRole(Role.ADMIN)) {
             throw new NotFoundException();
         }
 
@@ -137,7 +141,7 @@ public class AppsService {
     }
 
     @Transactional
-    public ClientSecretDto resetAppSecretByUser(UUID appId){
+    public ClientSecretDto resetAppSecretByUser(UUID appId) {
         try {
             var app = getAppByUser(appId);
             var newClientSecret = generateClientSecret();
@@ -152,7 +156,7 @@ public class AppsService {
     }
 
     @Transactional
-    public void giveConsentByUser(String clientId, String scopes){
+    public void giveConsentByUser(String clientId, String scopes) {
         var userContext = userService.getUserContext();
 
         var appUser = appUserRepository.findByAppClientIdAndUserIdAndAppDeletedAtIsNull(clientId, userContext.getId()).orElseGet(() -> {
@@ -171,8 +175,8 @@ public class AppsService {
         var requestedScopes = scopes.split(" ");
         var newScopes = new ArrayList<String>();
 
-        for(var scope : requestedScopes){
-            if(validScopes.contains(scope))
+        for (var scope : requestedScopes) {
+            if (validScopes.contains(scope))
                 newScopes.add(scope);
         }
 
@@ -181,27 +185,27 @@ public class AppsService {
         appUserRepository.save(appUser);
     }
 
-    public boolean checkConsent(String clientId, UUID userId, Set<String> scopes){
-        if(!appRepository.existsByClientIdAndDeletedAtIsNull(clientId)){
+    public boolean checkConsent(String clientId, UUID userId, Set<String> scopes) {
+        if (!appRepository.existsByClientIdAndDeletedAtIsNull(clientId)) {
             throw new NotFoundException("App not found.");
         }
 
         var appUser = appUserRepository.findByAppClientIdAndUserIdAndAppDeletedAtIsNull(clientId, userId).orElse(null);
-        if(appUser == null)
+        if (appUser == null)
             return false;
 
         var allowedScopes = appUser.getScopesList();
 
-        for (String scope : scopes){
-            if(!allowedScopes.contains(scope))
+        for (String scope : scopes) {
+            if (!allowedScopes.contains(scope))
                 return false;
         }
 
         return true;
     }
 
-    public PublicAppInfoDto getPublicAppInfo(String clientId, Set<String> checkScopes){
-            var app = appRepository.findByClientIdAndDeletedAtIsNull(clientId).orElseThrow(() -> new NotFoundException("App not found."));
+    public PublicAppInfoDto getPublicAppInfo(String clientId, Set<String> checkScopes) {
+        var app = appRepository.findByClientIdAndDeletedAtIsNull(clientId).orElseThrow(() -> new NotFoundException("App not found."));
         var userContext = userService.getUserContext();
         var authorized = userContext != null && !checkScopes.isEmpty()
                 ? checkConsent(clientId, userContext.getId(), checkScopes)
@@ -209,7 +213,19 @@ public class AppsService {
         return new PublicAppInfoDto(app.getName(), app.getClientId(), app.getHomepageUrl(), authorized);
     }
 
-    public PublicAppInfoDto getPublicAppInfo(String clientId){
+    public PublicAppInfoDto getPublicAppInfo(String clientId) {
         return getPublicAppInfo(clientId, Set.of());
+    }
+
+    public List<ConnectionDto> getConnectionsByUser() {
+        var userContext = userService.getUserContext();
+        var connections = appUserRepository.findByUserIdAndAppDeletedAtIsNull(userContext.getId());
+        return connectionMapper.toDtoList(connections);
+    }
+
+    @Transactional
+    public void disconnectAppByUser(String clientId){
+        var userContext = userService.getUserContext();
+        appUserRepository.deleteByUserIdAndAppClientId(userContext.getId(), clientId);
     }
 }

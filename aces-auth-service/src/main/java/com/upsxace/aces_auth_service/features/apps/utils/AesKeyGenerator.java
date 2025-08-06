@@ -1,4 +1,4 @@
-package com.upsxace.aces_auth_service.features.apps;
+package com.upsxace.aces_auth_service.features.apps.utils;
 
 import com.upsxace.aces_auth_service.lib.utils.AesUtils;
 import jakarta.annotation.PostConstruct;

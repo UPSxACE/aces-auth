@@ -1,6 +1,9 @@
 package com.upsxace.aces_auth_service.features.user;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 
@@ -8,10 +11,12 @@ import java.util.List;
 import java.util.UUID;
 
 @Data
-@RequiredArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 public class UserContext {
-    private final UUID id;
-    private final List<GrantedAuthority> authorities;
+    private UUID id;
+    private List<GrantedAuthority> authorities;
 
     public boolean hasRole(Role role) {
         return this.authorities.stream().anyMatch(

@@ -1,6 +1,6 @@
 package com.upsxace.aces_auth_service.features.info;
 
-import com.upsxace.aces_auth_service.features.apps.AppsService;
+import com.upsxace.aces_auth_service.features.apps.service.AppsService;
 import com.upsxace.aces_auth_service.features.apps.dto.PublicAppInfoDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

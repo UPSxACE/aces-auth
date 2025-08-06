@@ -2,6 +2,9 @@ package com.upsxace.aces_auth_service.features.apps;
 
 import com.upsxace.aces_auth_service.config.AppConfig;
 import com.upsxace.aces_auth_service.config.error.NotFoundException;
+import com.upsxace.aces_auth_service.features.apps.entity.App;
+import com.upsxace.aces_auth_service.features.apps.mapper.AppMapper;
+import com.upsxace.aces_auth_service.features.apps.repository.AppRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -10,6 +13,12 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -22,14 +31,15 @@ public class AppOAuthClientRepository implements RegisteredClientRepository {
         throw new IllegalStateException("Do not manually register clients.");
     }
 
-    private RegisteredClient appToRegisteredClient(App app){
+    private RegisteredClient appToRegisteredClient(App app) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException {
         return RegisteredClient.withId(app.getId().toString())
                 .clientId(app.getClientId())
                 .clientSecret(app.getClientSecret())
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUris((set)->{
+                .redirectUris((set) -> {
                     var uris = AppMapper.toStringList(app.getRedirectUris());
                     set.add(appConfig.getFrontendUrl() + "/oauth2/demo/callback");
                     set.addAll(uris);
@@ -46,13 +56,21 @@ public class AppOAuthClientRepository implements RegisteredClientRepository {
 
     @Override
     public RegisteredClient findById(String id) {
-        var app = appRepository.findByIdAndDeletedAtIsNull(UUID.fromString(id)).orElseThrow(()->new NotFoundException("App not found."));
-        return appToRegisteredClient(app);
+        try {
+            var app = appRepository.findByIdAndDeletedAtIsNull(UUID.fromString(id)).orElseThrow(() -> new NotFoundException("App not found."));
+            return appToRegisteredClient(app);
+        } catch (Exception ignore) {
+            throw new NotFoundException("App not found.");
+        }
     }
 
     @Override
     public RegisteredClient findByClientId(String clientId) {
-        var app = appRepository.findByClientIdAndDeletedAtIsNull(clientId).orElseThrow(()->new NotFoundException("App not found."));
-        return appToRegisteredClient(app);
+        try {
+            var app = appRepository.findByClientIdAndDeletedAtIsNull(clientId).orElseThrow(() -> new NotFoundException("App not found."));
+            return appToRegisteredClient(app);
+        } catch (Exception ignore) {
+            throw new NotFoundException("App not found.");
+        }
     }
 }
