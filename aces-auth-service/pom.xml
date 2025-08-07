@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.upsxace</groupId>
 	<artifactId>aces-auth-service</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0-alpha</version>
 	<name>aces-auth-service</name>
 	<description>Ace&apos;s Auth Authorization Server Service</description>
 	<url/>
