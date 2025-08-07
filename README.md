@@ -1,5 +1,5 @@
-# Ace's Auth Service
-[![version](https://img.shields.io/github/v/tag/upsxace/aces-auth-service?label=version)](https://github.com/upsxace/aces-auth-service/releases)
+# Ace's Auth
+[![version](https://img.shields.io/github/v/tag/upsxace/aces-auth?label=version)](https://github.com/upsxace/aces-auth/releases)
 
 A lightweight identity and access platform for modern web and backend applications — inspired by Auth0, Okta, and Clerk.
 
@@ -10,6 +10,8 @@ Standards-based authentication and authorization using OAuth 2.0 and OpenID Conn
 ## 🚧 Status
 This project is currently under active development. While the core functionality is in place, the platform and SDKs are evolving rapidly. Expect improvements, new features, and refinements over time.
 
+> 📚 The README will be expanded soon with full documentation, usage examples, and integration guides.
+
 ## 🧭 Index
 * [📡 API Endpoints](#📡-api-endpoints)
   * [Authentication](#authentication)
@@ -19,10 +21,6 @@ This project is currently under active development. While the core functionality
 * [🤝 Contributing](#🤝-contributing)
 * [📜 License](#📜-license)
 * [✨ Acknowledgments](#✨-acknowledgments)
-
-
-
-> 📚 The README will be expanded soon with full documentation, usage examples, and integration guides.
 
 ## 📡 API Endpoints
 
