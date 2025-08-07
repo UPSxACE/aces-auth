@@ -1,3 +1,8 @@
+server:
+  servlet:
+    session:
+      cookie:
+        domain: "${COOKIE_DOMAIN:localhost}"
 spring:
   config:
     import: "application_prod.yaml" # communicates to Spring Boot to import the production profile settings
@@ -24,6 +29,7 @@ config:
   app-identity: "aces-auth-service"
   max-sessions: 5
   frontend-url: "${FRONTEND_URL:http://localhost:3000}"
+  cookie-domain: "${COOKIE_DOMAIN:localhost}"
   jwt:
     secret: "${JWT_SECRET:}"
     access-token-expiration: "${JWT_ACCESS_EXPIRATION:3600}" # in seconds (default 1 hour)

@@ -12,6 +12,7 @@ public class AppConfig {
     private String appIdentity;
     private int maxSessions;
     private String frontendUrl;
+    private String cookieDomain;
     private Jwt jwt;
 
     @Data

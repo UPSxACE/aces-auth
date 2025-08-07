@@ -69,16 +69,14 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    @Order(3)
-    @Profile("prod")
-    public SecurityFilterChain productionSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/*").redirectToHttps(httpsRedirectConfig ->
-                httpsRedirectConfig.requestMatchers(AnyRequestMatcher.INSTANCE)
-        );
-
-        return http.build();
-    }
+    //    NOTE: Force HTTPS in the reverse proxy layer
+    //
+    //    @Bean
+    //    @Order(3)
+    //    @Profile("prod")
+    //    public SecurityFilterChain productionSecurityFilterChain(HttpSecurity http) throws Exception {
+    //        return http.build();
+    //    }
 
     @Bean
     @Order(4)

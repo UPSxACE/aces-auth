@@ -27,6 +27,7 @@ public class AuthController {
 
     private ResponseCookie createRefreshTokenCookie(String refreshToken) {
         return ResponseCookie.from("refreshToken", refreshToken)
+                .domain(appConfig.getCookieDomain())
                 .httpOnly(true) // prevent JavaScript access
                 .path("/")
                 .maxAge(appConfig.getJwt().getRefreshTokenExpiration())
